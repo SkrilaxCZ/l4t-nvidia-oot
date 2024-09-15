@@ -147,11 +147,6 @@ static inline u32 sec_lic_intr_enable_r(int version)
 		return v2_sec_lic_intr_enable_r();
 }
 
-static inline u32 hwpm_get_offset(void)
-{
-	return 0x200000;
-}
-
 static inline u32 sec_ec_errslice0_missionerr_enable_r(void)
 {
 	return (SEC_BASE_COMMON + 0x30U);

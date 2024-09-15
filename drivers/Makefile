@@ -5,7 +5,6 @@ LINUXINCLUDE += -I$(srctree.nvidia-oot)/include
 LINUXINCLUDE += -I$(srctree.nvidia-oot)/drivers/gpu/host1x/hw/
 LINUXINCLUDE += -I$(srctree.nvidia-oot)/drivers/video/tegra/host/
 LINUXINCLUDE += -I$(srctree.nvidia-oot)/drivers/gpu/host1x/include
-LINUXINCLUDE += -I$(srctree.hwpm)/include
 
 obj-m += block/tegra_virt_storage/
 ifdef CONFIG_PSTORE

@@ -24,7 +24,6 @@
 #include "falcon.h"
 #include "util.h"
 #include "vic.h"
-#include "hwpm.h"
 
 #define OFA_TFBIF_TRANSCFG		0x1444
 #define OFA_TFBIF_ACTMON_ACTIVE_MASK	0x144c
@@ -46,7 +45,6 @@ struct ofa_config {
 
 struct ofa {
 	struct falcon falcon;
-	struct tegra_drm_hwpm hwpm;
 
 	void __iomem *regs;
 	struct tegra_drm_client client;
@@ -586,11 +584,6 @@ static int ofa_probe(struct platform_device *pdev)
 		goto exit_actmon;
 	}
 
-	ofa->hwpm.dev = dev;
-	ofa->hwpm.regs = ofa->regs;
-	tegra_drm_hwpm_register(&ofa->hwpm, pdev->resource[0].start,
-		TEGRA_DRM_HWPM_IP_OFA);
-
 	pm_runtime_enable(dev);
 	pm_runtime_use_autosuspend(dev);
 	pm_runtime_set_autosuspend_delay(dev, 500);
@@ -613,9 +606,6 @@ static int ofa_remove(struct platform_device *pdev)
 	pm_runtime_disable(&pdev->dev);
 
 	ofa_devfreq_deinit(ofa);
-
-	tegra_drm_hwpm_unregister(&ofa->hwpm, pdev->resource[0].start,
-		TEGRA_DRM_HWPM_IP_OFA);
 
 	host1x_actmon_unregister(&ofa->client.base);
 

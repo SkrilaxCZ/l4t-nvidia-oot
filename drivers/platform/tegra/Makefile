@@ -11,7 +11,6 @@ obj-m += mce/
 ifdef CONFIG_PERF_EVENTS
 obj-m += uncore_pmu/
 endif
-obj-m += mc-hwpm.o
 obj-m += mc-utils/
 obj-m += dce/
 obj-m += psc/

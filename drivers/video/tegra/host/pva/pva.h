@@ -20,8 +20,6 @@
 #include "pva_vpu_app_auth.h"
 #include "pva_fw_carveout.h"
 
-#include <uapi/linux/tegra-soc-hwpm-uapi.h>
-
 /**
  * PVA Host1x class IDs
  */
@@ -443,8 +441,6 @@ struct pva {
 	struct mutex clients_lock;
 
 	struct pva_vpu_dbg_block vpu_dbg_blocks[NUM_VPU_BLOCKS];
-
-	struct tegra_soc_hwpm_ip_ops hwpm_ip_ops;
 };
 
 /**

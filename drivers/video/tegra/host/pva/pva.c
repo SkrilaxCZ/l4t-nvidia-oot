@@ -1032,51 +1032,6 @@ int pva_prepare_poweroff(struct platform_device *pdev)
 	return 0;
 }
 
-int pva_hwpm_ip_pm(void *ip_dev, bool disable)
-{
-	int err = 0;
-	struct platform_device *dev = (struct platform_device *)ip_dev;
-
-	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
-	struct pva *pva = pdata->private_data;
-
-	nvpva_dbg_info(pva, "ip power management %s",
-			disable ? "disable" : "enable");
-
-	if (disable) {
-		err = nvhost_module_busy(ip_dev);
-		if (err < 0)
-			dev_err(&dev->dev, "nvhost_module_busy failed");
-	} else {
-		nvhost_module_idle(ip_dev);
-	}
-
-	return err;
-}
-
-int pva_hwpm_ip_reg_op(void *ip_dev, enum tegra_soc_hwpm_ip_reg_op reg_op,
-	u32 inst_element_index, u64 reg_offset, u32 *reg_data)
-{
-	struct platform_device *dev = (struct platform_device *)ip_dev;
-	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
-	struct pva *pva = pdata->private_data;
-
-	if (reg_offset > UINT_MAX)
-		return -EINVAL;
-
-	nvpva_dbg_info(pva, "reg_op %d reg_offset %llu", reg_op, reg_offset);
-
-	if (reg_op == TEGRA_SOC_HWPM_IP_REG_OP_READ)
-		*reg_data = host1x_readl(dev,
-			(hwpm_get_offset() + (unsigned int)reg_offset));
-	else if (reg_op == TEGRA_SOC_HWPM_IP_REG_OP_WRITE)
-		host1x_writel(dev,
-			(hwpm_get_offset() + (unsigned int)reg_offset),
-			*reg_data);
-
-	return 0;
-}
-
 #if !IS_ENABLED(CONFIG_TEGRA_GRHOST)
 static ssize_t clk_cap_store(struct kobject *kobj,
 	struct kobj_attribute *attr, const char *buf, size_t count)
@@ -1147,9 +1102,6 @@ static int pva_probe(struct platform_device *pdev)
 	struct pva *pva;
 	int err = 0;
 	size_t i;
-#ifndef CONFIG_TEGRA_T26X_GRHOST_PVA
-	u32 offset;
-#endif
 
 #if !IS_ENABLED(CONFIG_TEGRA_GRHOST)
 	struct kobj_attribute *attr = NULL;
@@ -1399,23 +1351,6 @@ static int pva_probe(struct platform_device *pdev)
 
 	++(pva->sid_count);
 
-#ifndef CONFIG_TEGRA_T26X_GRHOST_PVA
-	offset = hwpm_get_offset();
-
-	if ((UINT_MAX - offset) < pdev->resource[0].start) {
-		err = -ENODEV;
-		goto err_mss_init;
-	}
-
-	nvpva_dbg_info(pva, "hwpm ip %s register", pdev->name);
-	pva->hwpm_ip_ops.ip_dev = (void *)pdev;
-	pva->hwpm_ip_ops.ip_base_address = (pdev->resource[0].start + offset);
-	pva->hwpm_ip_ops.resource_enum = TEGRA_SOC_HWPM_RESOURCE_PVA;
-	pva->hwpm_ip_ops.hwpm_ip_pm = &pva_hwpm_ip_pm;
-	pva->hwpm_ip_ops.hwpm_ip_reg_op = &pva_hwpm_ip_reg_op;
-	tegra_soc_hwpm_ip_register(&pva->hwpm_ip_ops);
-#endif
-
 #if !IS_ENABLED(CONFIG_TEGRA_GRHOST)
 	if (pdata->num_clks > 0) {
 		err = kobject_init_and_add(&pdata->clk_cap_kobj, &nvpva_kobj_ktype,
@@ -1505,8 +1440,6 @@ static int __exit pva_remove(struct platform_device *pdev)
 		kobject_put(&pdata->clk_cap_kobj);
 	}
 #endif
-
-	tegra_soc_hwpm_ip_unregister(&pva->hwpm_ip_ops);
 
 #ifdef CONFIG_DEBUG_FS
 	pva_debugfs_deinit(pva);

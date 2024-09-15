@@ -19,10 +19,6 @@
 
 #include "drm.h"
 
-#ifndef CONFIG_TEGRA_SYSTEM_TYPE_ACK
-#include <uapi/linux/tegra-soc-hwpm-uapi.h>
-#endif
-
 #define TEGRA_VHOST_CMD_CONNECT			0
 #define TEGRA_VHOST_CMD_DISCONNECT		1
 #define TEGRA_VHOST_CMD_SUSPEND			2
@@ -331,111 +327,12 @@ static const struct of_device_id tegra_virt_engine_of_match[] = {
 };
 MODULE_DEVICE_TABLE(of, tegra_virt_engine_of_match);
 
-#ifndef CONFIG_TEGRA_SYSTEM_TYPE_ACK
-static u32 virt_engine_get_ip_index(const char *name)
-{
-	if (strstr(name, "vic")) {
-		return (u32)TEGRA_SOC_HWPM_RESOURCE_VIC;
-	} else if (strstr(name, "nvenc")) {
-		return (u32)TEGRA_SOC_HWPM_RESOURCE_NVENC;
-	} else if (strstr(name, "ofa")) {
-		return (u32)TEGRA_SOC_HWPM_RESOURCE_OFA;
-	} else if (strstr(name, "nvdec")) {
-		return (u32)TEGRA_SOC_HWPM_RESOURCE_NVDEC;
-	}
-	return (u32)TERGA_SOC_HWPM_NUM_IPS;
-}
-
-static u32 virt_engine_extract_base_addr(struct platform_device *pdev)
-{
-	u32 hwpm_ip_index;
-	u32 base_address;
-
-	hwpm_ip_index = virt_engine_get_ip_index(pdev->name);
-	if (hwpm_ip_index == TEGRA_SOC_HWPM_RESOURCE_VIC) {
-		base_address = 0x15340000;
-	} else if (hwpm_ip_index == TEGRA_SOC_HWPM_RESOURCE_NVENC) {
-		base_address = 0x154c0000;
-	} else if (hwpm_ip_index == TEGRA_SOC_HWPM_RESOURCE_OFA) {
-		base_address = 0x15a50000;
-	} else if (hwpm_ip_index == TEGRA_SOC_HWPM_RESOURCE_NVDEC) {
-		base_address = 0x15480000;
-	} else {
-		dev_err(&pdev->dev, "IP Base address not found");
-		return -ENOMEM;
-	}
-
-	return base_address;
-}
-
-static int virt_engine_ip_pm(void *ip_dev, bool disable)
-{
-	int err = 0;
-	struct platform_device *pdev = (struct platform_device *)ip_dev;
-
-	if (disable) {
-		dev_warn(&pdev->dev, "Power Mgmt not impleted in vhost_engine."
-				"IP expected to be ON");
-	} else {
-		dev_warn(&pdev->dev, "Power Mgmt not impleted in vhost_engine."
-				"IP expected to be ON");
-	}
-
-	return err;
-}
-
-static int virt_engine_ip_reg_op(void *ip_dev,
-		enum tegra_soc_hwpm_ip_reg_op reg_op,
-		u32 inst_element_index, u64 reg_offset, u32 *reg_data)
-{
-	struct platform_device *pdev = (struct platform_device *)ip_dev;
-	u32 base_address;
-
-	base_address = virt_engine_extract_base_addr(pdev);
-	if (base_address <= 0) {
-		dev_err(&pdev->dev, "IP Base address not found. HWPM Reg_OP failed");
-		return -ENOMEM;
-	}
-
-	if (reg_op == TEGRA_SOC_HWPM_IP_REG_OP_READ) {
-		void __iomem *ptr = NULL;
-
-		reg_offset = reg_offset + base_address;
-		ptr = ioremap(reg_offset, 0x4);
-		if (!ptr) {
-			dev_err(&pdev->dev, "Failed to map IP Perfmux register (0x%llx)",
-					reg_offset);
-		}
-		*reg_data = __raw_readl(ptr);
-		iounmap(ptr);
-	} else if (reg_op == TEGRA_SOC_HWPM_IP_REG_OP_WRITE) {
-		void __iomem *ptr = NULL;
-
-		reg_offset = reg_offset + base_address;
-
-		ptr = ioremap(reg_offset, 0x4);
-		if (!ptr) {
-			dev_err(&pdev->dev, "Failed to map IP Perfmux register (0x%llx)",
-					reg_offset);
-		}
-		__raw_writel(*reg_data, ptr);
-		iounmap(ptr);
-	}
-
-	return 0;
-}
-#endif
-
 static int virt_engine_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	u32 module_id, class;
 	struct virt_engine *virt;
 	int err;
-#ifndef CONFIG_TEGRA_SYSTEM_TYPE_ACK
-        struct tegra_soc_hwpm_ip_ops hwpm_ip_ops;
-        u32 hwpm_ip_index;
-#endif
 
 	err = of_property_read_u32(pdev->dev.of_node, "nvidia,module-id", &module_id);
 	if (err < 0) {
@@ -502,22 +399,6 @@ static int virt_engine_probe(struct platform_device *pdev)
 
 	virt_engine_setup_actmon_debugfs(virt);
 
-#ifndef CONFIG_TEGRA_SYSTEM_TYPE_ACK
-	hwpm_ip_index = virt_engine_get_ip_index(pdev->name);
-	if (hwpm_ip_index != TERGA_SOC_HWPM_NUM_IPS) {
-		hwpm_ip_ops.ip_dev = (void *)pdev;
-		hwpm_ip_ops.ip_base_address = virt_engine_extract_base_addr(pdev);
-		if (hwpm_ip_ops.ip_base_address <= 0) {
-			dev_err(&pdev->dev,
-					"IP Base address not found. HWPM-IP registration failed");
-			return 0;
-		}
-		hwpm_ip_ops.resource_enum = hwpm_ip_index;
-		hwpm_ip_ops.hwpm_ip_pm = &virt_engine_ip_pm;
-		hwpm_ip_ops.hwpm_ip_reg_op = &virt_engine_ip_reg_op;
-		tegra_soc_hwpm_ip_register(&hwpm_ip_ops);
-	}
-#endif
 	return 0;
 
 cleanup_ivc:
@@ -531,22 +412,6 @@ unregister_client:
 static int virt_engine_remove(struct platform_device *pdev)
 {
 	struct virt_engine *virt_engine = platform_get_drvdata(pdev);
-#ifndef CONFIG_TEGRA_SYSTEM_TYPE_ACK
-	struct tegra_soc_hwpm_ip_ops hwpm_ip_ops;
-	u32 hwpm_ip_index = virt_engine_get_ip_index(pdev->name);
-
-	if (hwpm_ip_index != TERGA_SOC_HWPM_NUM_IPS) {
-		hwpm_ip_ops.ip_dev = (void *)pdev;
-		hwpm_ip_ops.ip_base_address = virt_engine_extract_base_addr(pdev);
-		if (hwpm_ip_ops.ip_base_address <= 0) {
-			dev_err(&pdev->dev,
-					"IP Base address not found. HWPM-IP Un-register failed");
-			return 0;
-		}
-		hwpm_ip_ops.resource_enum = hwpm_ip_index;
-		tegra_soc_hwpm_ip_unregister(&hwpm_ip_ops);
-	}
-#endif
 	virt_engine_cleanup_actmon_debugfs(virt_engine);
 	virt_engine_cleanup();
 
