@@ -108,7 +108,7 @@ static unsigned long bw_to_freq(unsigned long bw)
 	return (bw + CH_4_BYTES_PER_CLK - 1) / CH_4_BYTES_PER_CLK;
 }
 
-static unsigned long emc_freq_to_bw_t23x(unsigned long freq)
+static unsigned long emc_freq_to_bw_common(unsigned long freq)
 {
 	return freq_to_bw(freq);
 }
@@ -119,7 +119,7 @@ unsigned long emc_freq_to_bw(unsigned long freq)
 }
 EXPORT_SYMBOL(emc_freq_to_bw);
 
-static unsigned long emc_bw_to_freq_t23x(unsigned long bw)
+static unsigned long emc_bw_to_freq_common(unsigned long bw)
 {
 	return bw_to_freq(bw);
 }
@@ -131,7 +131,7 @@ unsigned long emc_bw_to_freq(unsigned long bw)
 EXPORT_SYMBOL(emc_bw_to_freq);
 
 
-static u8 get_dram_num_channels_t23x(void)
+static u8 get_dram_num_channels_common(void)
 {
 	return ch_num;
 }
@@ -146,7 +146,7 @@ EXPORT_SYMBOL(get_dram_num_channels);
  *
  * Return: MC clock in MHz
 */
-static unsigned long dram_clk_to_mc_clk_t23x(unsigned long dram_clk)
+static unsigned long dram_clk_to_mc_clk_common(unsigned long dram_clk)
 {
 	unsigned long mc_clk;
 
@@ -283,7 +283,7 @@ static void set_dram_type(void)
 	}
 }
 
-static enum dram_types tegra_dram_types_t23x(void)
+static enum dram_types tegra_dram_types_common(void)
 {
 	return dram_type;
 }
@@ -327,14 +327,62 @@ static u32 get_dram_dt_prop(struct device_node *np, const char *prop)
 	return val;
 }
 
-static struct mc_utils_ops mc_utils_t23x_ops = {
-	.emc_freq_to_bw = emc_freq_to_bw_t23x,
-	.emc_bw_to_freq = emc_bw_to_freq_t23x,
-	.tegra_dram_types = tegra_dram_types_t23x,
-	.get_dram_num_channels = get_dram_num_channels_t23x,
-	.dram_clk_to_mc_clk = dram_clk_to_mc_clk_t23x,
+static struct mc_utils_ops mc_utils_t19x_ops = {
+	.emc_freq_to_bw = emc_freq_to_bw_common,
+	.emc_bw_to_freq = emc_bw_to_freq_common,
+	.tegra_dram_types = tegra_dram_types_common,
+	.get_dram_num_channels = get_dram_num_channels_common,
+	.dram_clk_to_mc_clk = dram_clk_to_mc_clk_common,
 };
 
+static int __init tegra_mc_utils_init_t19x(void)
+{
+	u32 dram, ch, ecc, rank;
+	void __iomem *emc_base;
+	void __iomem *mcb_base;
+
+	emc_base = ioremap(EMC_BASE, 0x00010000);
+	dram = readl(emc_base + EMC_FBIO_CFG5_0) & DRAM_MASK;
+	mcb_base = ioremap(MCB_BASE, MCB_SIZE);
+	if (!mcb_base) {
+		pr_err("Failed to ioremap\n");
+		return -ENOMEM;
+	}
+
+	ch = readl(mcb_base + MC_EMEM_ADR_CFG_CHANNEL_ENABLE_0);
+	ch &= CH_MASK;
+	ecc = 0;
+
+	rank = readl(mcb_base + MC_EMEM_ADR_CFG_0) & RANK_MASK;
+
+	iounmap(emc_base);
+	iounmap(mcb_base);
+
+	while (ch) {
+		if (ch & 1)
+			ch_num++;
+		ch >>= 1;
+	}
+
+	emc_param.ecc = ecc;
+	emc_param.rank = rank;
+	emc_param.dram = dram;
+
+	set_dram_type();
+
+#if defined(CONFIG_DEBUG_FS)
+	tegra_mc_utils_debugfs_init();
+#endif
+	return 0;
+}
+
+static struct mc_utils_ops mc_utils_t23x_ops = {
+	.emc_freq_to_bw = emc_freq_to_bw_common,
+	.emc_bw_to_freq = emc_bw_to_freq_common,
+	.tegra_dram_types = tegra_dram_types_common,
+	.get_dram_num_channels = get_dram_num_channels_common,
+	.dram_clk_to_mc_clk = dram_clk_to_mc_clk_common,
+};
 
 static int __init tegra_mc_utils_init_t23x(void)
 {
@@ -396,6 +444,10 @@ static int __init tegra_mc_utils_init(void)
 	if (of_machine_is_compatible("nvidia,tegra234")) {
 		ops = &mc_utils_t23x_ops;
 		return tegra_mc_utils_init_t23x();
+	}
+	if (of_machine_is_compatible("nvidia,tegra194")) {
+		ops = &mc_utils_t19x_ops;
+		return tegra_mc_utils_init_t19x();
 	}
 	pr_err("mc-utils: Not able to find SOC DT node\n");
 	return -ENODEV;
