@@ -6,7 +6,4 @@ obj-m += nvidia/
 ifdef CONFIG_PCI
 obj-m += marvell/
 obj-m += microchip/
-ifeq ($(VERSION).$(PATCHLEVEL),5.15)
-obj-m += realtek/
-endif
 endif

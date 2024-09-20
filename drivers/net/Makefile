@@ -5,6 +5,4 @@ obj-m += ethernet/
 ifdef CONFIG_CAN
 obj-m += can/
 endif
-ifdef CONFIG_WLAN
-obj-m += wireless/
-endif
+
