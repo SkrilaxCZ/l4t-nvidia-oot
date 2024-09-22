@@ -6247,6 +6247,12 @@ static void ether_get_num_dma_chan_mtl_q(struct platform_device *pdev,
 		max_chans = OSI_MGBE_MAX_NUM_CHANS;
 	}
 
+	ret = of_device_is_compatible(np, "nvidia,tegra194-eqos");
+	if (ret != 0) {
+		*mac = OSI_MAC_HW_EQOS;
+		max_chans = OSI_EQOS_MAX_NUM_CHANS;
+	}
+
 	ret = of_device_is_compatible(np, "nvidia,tegra234-eqos");
 	if (ret != 0) {
 		*mac = OSI_MAC_HW_EQOS;
@@ -7043,6 +7049,7 @@ static const struct of_device_id ether_of_match[] = {
 	{ .compatible = "nvidia,nveqos" },
 	{ .compatible = "nvidia,nvmgbe" },
 	{ .compatible = "nvidia,tegra234-mgbe" },
+	{ .compatible = "nvidia,tegra194-eqos" },
 	{ .compatible = "nvidia,tegra234-eqos" },
 	{},
 };
