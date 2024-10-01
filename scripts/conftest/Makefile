@@ -138,6 +138,7 @@ NV_CONFTEST_FUNCTION_COMPILE_TESTS += mii_bus_struct_has_read_c45
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += mii_bus_struct_has_write_c45
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += netif_set_tso_max_size
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += netif_napi_add_weight
+NV_CONFTEST_FUNCTION_COMPILE_TESTS += no_llseek
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += of_get_named_gpio_flags
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += gpio_chip_struct_has_of_node_present
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += gpio_device_find
