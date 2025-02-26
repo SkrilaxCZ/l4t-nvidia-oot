@@ -291,7 +291,6 @@ inline u32 ttcan_read_ecr(struct ttcan_controller *ttcan)
 	return ttcan_read32(ttcan, ADR_MTTCAN_ECR);
 }
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 16, 0)
 static void tegra_mttcan_config_prod_settings(struct mttcan_priv *priv)
 {
 	struct ttcan_controller *ttcan = priv->ttcan;
@@ -315,48 +314,6 @@ static void tegra_mttcan_config_prod_settings(struct mttcan_priv *priv)
 	if (ret == 0)
 		dev_dbg(priv->device, "setting prod: %s\n", prod_name);
 }
-#else
-static void tegra_mttcan_write_prod_settings(struct mttcan_priv *priv, const char *prod_name)
-{
-	struct ttcan_controller *ttcan = priv->ttcan;
-	struct tegra_prod_reg_info *reg_info;
-	struct tegra_prod_cfg_info *prod_cfg;
-	u32 rval;
-	int i;
-
-	prod_cfg = tegra_prod_get_by_name_from_list(priv->device, ttcan->prod_list, prod_name);
-	if (prod_cfg == NULL)
-		return;
-
-	reg_info = prod_cfg->reg_info;
-	for (i = 0; i < prod_cfg->num_reg_info; ++i) {
-		rval = ttcan_read32(ttcan, reg_info[i].reg_offset);
-		rval &= ~reg_info[i].reg_mask;
-		rval |= reg_info[i].reg_value;
-		ttcan_write32(ttcan, reg_info[i].reg_offset, rval);
-	}
-}
-
-static void tegra_mttcan_config_prod_settings(struct mttcan_priv *priv)
-{
-	struct ttcan_controller *ttcan = priv->ttcan;
-	char *prod_name;
-
-	switch (ttcan->bt_config.data.bitrate) {
-	case MTTCAN_SPEED_5MBPS:
-		prod_name = "prod_c_can_5m";
-		break;
-	case MTTCAN_SPEED_8MBPS:
-		prod_name = "prod_c_can_8m";
-		break;
-	default:
-		prod_name = "prod_c_can_2m_1m";
-		break;
-	}
-
-	tegra_mttcan_write_prod_settings(priv, prod_name);
-}
-#endif
 
 int ttcan_set_bitrate(struct mttcan_priv *priv)
 {
