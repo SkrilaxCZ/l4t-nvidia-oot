@@ -26,3 +26,5 @@ obj-m += sound/soc/tegra/
 obj-m += sound/tegra-safety-audio/
 obj-m += sound/soc/tegra-virt-alt/
 endif
+
+obj-m += custom/
