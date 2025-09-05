@@ -1,0 +1,19 @@
+diff a/drivers/video/tegra/nvmap/nvmap_handle.c b/drivers/video/tegra/nvmap/nvmap_handle.c	(rejected hunks)
+@@ -414,7 +414,7 @@
+ 		if (!mmget_not_zero(ref->mm))
+ 			goto exit;
+ 
+-		add_mm_counter(ref->mm, MM_ANONPAGES, ref->anon_count);
++		nvmap_add_mm_counter(ref->mm, MM_ANONPAGES, ref->anon_count);
+ 	}
+ 
+ 	if (is_ro) {
+@@ -436,7 +436,7 @@
+ 
+ exit_mm:
+ 	if (ref->anon_count != 0 && ref->mm != NULL) {
+-		add_mm_counter(ref->mm, MM_ANONPAGES, -ref->anon_count);
++		nvmap_add_mm_counter(ref->mm, MM_ANONPAGES, -ref->anon_count);
+ 		mmput(ref->mm);
+ 		ref->mm = NULL;
+ 		ref->anon_count = 0;
